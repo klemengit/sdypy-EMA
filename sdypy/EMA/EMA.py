@@ -10,15 +10,11 @@ from scipy.optimize import least_squares, leastsq
 
 import warnings
 
+# The stability chart uses Qt when available and falls back to Tk;
+# Model.select_poles() reports when neither can be used.
 try:
     import tkinter as tk
 except ImportError:
-    warnings.warn(
-        'tkinter is not installed or not accessible. The interactive '
-        'stability chart (Model.select_poles) will not be available.',
-        ImportWarning,
-        stacklevel=2,
-    )
     tk = None
 
 import pyuff
@@ -644,12 +640,17 @@ class Model():
             self.pole_freq.append(f_pole)
             self.pole_xi.append(ceta)
 
-    def select_poles(self):
+    def select_poles(self, gui='auto'):
         """Select stable poles from stability chart.
-       
+
         Interactive pole selection is possible. Identification of natural
         frequency and damping coefficients is executed on-the-fly,
         as well as computing the reconstructed FRF and modal constants.
+
+        :param gui: toolkit for the chart window: ``'qt'`` (needs PySide6 or
+            PyQt6, e.g. ``pip install "sdypy-EMA[qt]"``), ``'tk'``, or
+            ``'auto'`` to use Qt when a Qt binding is installed and Tk otherwise.
+        :type gui: str, optional
 
         The identification can be done in two ways:
         
@@ -669,11 +670,28 @@ class Model():
         >>> a.nat_xi # damping coefficients
         >>> H, A = a.get_constants(whose_poles='own', FRF_ind='all) # reconstruction
         """
+        if gui not in ('auto', 'qt', 'tk'):
+            raise ValueError(f'gui must be "auto", "qt" or "tk", not {gui!r}.')
+
+        if gui in ('auto', 'qt'):
+            try:
+                from matplotlib.backends import qt_compat  # raises ImportError without a Qt binding
+            except ImportError as err:
+                if gui == 'qt':
+                    raise ImportError(
+                        'The Qt stability chart needs PySide6 or PyQt6; install '
+                        'one, e.g. pip install "sdypy-EMA[qt]".'
+                    ) from err
+            else:
+                from .pole_picking_qt import select_poles_qt
+                select_poles_qt(self)
+                return
+
         if tk is None:
             raise RuntimeError(
-                'tkinter is not available in this environment; the '
-                'interactive stability chart cannot be opened. Use '
-                'Model.select_closest_poles() instead.'
+                'No GUI toolkit is available for the stability chart. Install '
+                'PySide6 or PyQt6 (pip install "sdypy-EMA[qt]") or tkinter, or '
+                'use Model.select_closest_poles() instead.'
             )
         root = tk.Tk()
         _ = SelectPoles(self, root)
