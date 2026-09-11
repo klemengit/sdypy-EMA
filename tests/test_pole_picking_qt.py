@@ -7,7 +7,7 @@ import os
 import numpy as np
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ["QT_QPA_PLATFORM"] = "offscreen"  # desktop sessions set their own platform
 pytest.importorskip("matplotlib.backends.qt_compat")
 
 from matplotlib.backend_bases import MouseEvent
