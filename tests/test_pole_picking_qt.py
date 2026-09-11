@@ -8,7 +8,8 @@ import numpy as np
 import pytest
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"  # desktop sessions set their own platform
-pytest.importorskip("matplotlib.backends.qt_compat")
+# qt_compat raises a plain ImportError (not ModuleNotFoundError) when no binding is installed
+pytest.importorskip("matplotlib.backends.qt_compat", exc_type=ImportError)
 
 from matplotlib.backend_bases import MouseEvent
 
